@@ -1,5 +1,5 @@
-A = input("Zadej prvni cislo: ")
-B = input("Zadej druhe cislo: ")
+A = int(input("Zadej prvni cislo: "))
+B = int(input("Zadej druhe cislo: "))
 operace = input("Zadej operaci (+, -, *, /): ")
 if operace == "+":
     print(int(A) + int(B))
@@ -13,3 +13,4 @@ else :
     print("Neznamy operator")
 
 
+2
