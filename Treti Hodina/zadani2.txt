@@ -1,0 +1,1 @@
+#Udelej kod ktery na vstupu vezme 2 cisla a secte je a vypise jejich soucet

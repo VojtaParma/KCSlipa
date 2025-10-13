@@ -1,8 +1,9 @@
-
+import time as t
+x = int(input("Zadejte číslo: "))
 counter = 0
-
-while counter < 5:
-    print(f"Počítadlo: {counter}")
-    counter += 1 
-
+while counter < x + 1:
+    print("Počítadlo:",counter)
+    t.sleep(0.5)
+    counter += 1
+t.sleep(5)
 print("Konec.")

@@ -11,6 +11,3 @@ elif operace == "/":
     print(int(A) / int(B))
 else :
     print("Neznamy operator")
-
-
-2

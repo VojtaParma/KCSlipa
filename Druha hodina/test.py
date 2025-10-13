@@ -1,1 +1,0 @@
-jmeno = (input("Zadej jmeno: "))

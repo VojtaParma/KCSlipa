@@ -1,0 +1,1 @@
+#Udelej kod kam zadam svoje jmeno a on vypise : Ahoj, {jmeno}
