@@ -1,1 +1,0 @@
-Pouzij kod z ulohy jedna ale misto vypisovani vsech techto cisel je secte a vypise pouze soucet cisel

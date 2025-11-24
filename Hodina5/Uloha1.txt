@@ -1,0 +1,7 @@
+Zeptá se uživatele, kolikrát má program počítat,
+
+Uloží tuto hodnotu jako celé číslo do proměnné repeat_times,
+
+Pomocí cyklu for vypíše všechna čísla od nuly až po zadané číslo,
+
+Mezi každým výpisem udělá krátkou pauzu (0.1 sekundy), aby bylo vidět, jak čísla „běží“.

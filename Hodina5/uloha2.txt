@@ -1,0 +1,5 @@
+Zeptá se uživatele na číslo (např. 10),
+
+Spočítá součet všech čísel od nuly až po toto číslo,
+
+A na konci vypíše celkový výsledek.

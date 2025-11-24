@@ -1,2 +1,0 @@
-Udelejte kod ktery v input ulozi jako promenou "repeat_times" promena muze byt pouze cislo(int)
-Pote vypise vsechny cisla od nuly az po toto cislo a mezi kazdym vyspanym cislem bude prodleva 0.1 sekundy
