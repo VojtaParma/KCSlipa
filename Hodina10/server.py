@@ -1,171 +1,165 @@
 import pygame
 import socket
 import pickle
+import random
 
-# Spuštění pygame
+# --- NASTAVENÍ ---
 pygame.init()
-okno = pygame.display.set_mode((300, 300))
-pygame.display.set_caption("Piškvorky SERVER - Ty jsi X")
-hodiny = pygame.time.Clock()  # Pro řízení FPS
+SIRKA_HRY = 300
+SIRKA_TERMINALU = 250
+SIRKA_OKNA = SIRKA_HRY + SIRKA_TERMINALU
+okno = pygame.display.set_mode((SIRKA_OKNA, 300))
+pygame.display.set_caption("Piškvorky SERVER (X)")
+hodiny = pygame.time.Clock()
 
 # Barvy
 BILA = (255, 255, 255)
-CERNA = (0, 0, 0)
-MODRA = (0, 0, 255)
-CERVENA = (255, 0, 0)
+CERNA = (10, 10, 10)  # Trochu jemnější černá pro terminál
+MODRA = (0, 100, 255)
+CERVENA = (220, 20, 60)
+ZELENA = (57, 255, 20) # "Matrix" zelená
+SEDA = (200, 200, 200)
 
-# Hrací pole
-pole = [[0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0]]
+# --- LOGIKA TERMINÁLU ---
+logy = ["--- SYSTEM START ---", "Waiting for connection..."]
 
-hrac = 1  # Kdo je na tahu (1 = X/server, 2 = O/klient)
-muj_symbol = 1  # Server je vždy X
-hra_bezi = True
-konec = 0
+def pridej_log(text):
+    global logy
+    logy.append(text)
+    if len(logy) > 13: # Omezení počtu řádků
+        logy.pop(0)
 
-# --- SÍŤOVÁ ČÁST ---
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Umožní znovupoužití portu
-server.bind(("0.0.0.0", 5555))  # Naslouchá na portu 5555
-server.listen(1)
-server.setblocking(False)  # Neblokující režim
+# --- LOGIKA HRY ---
+def reset_hry():
+    global pole, hrac, konec
+    pole = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+    konec = 0 
+    hrac = random.choice([1, 2]) # 1 = Server (X), 2 = Klient (O)
+    kdo = "SERVER" if hrac == 1 else "CLIENT"
+    pridej_log(f"New Game. Starter: {kdo}")
 
-print("Čekám na připojení klienta...")
-print("Server běží na portu 5555")
-klient = None
+reset_hry()
+muj_symbol = 1
 pripojeno = False
 
-# Funkce pro vykreslení
+# --- SÍŤOVÉ NASTAVENÍ ---
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind(("0.0.0.0", 5555))
+server.listen(1)
+server.setblocking(False)
+
+klient = None
+
+# --- FUNKCE PRO VYKRESLOVÁNÍ ---
 def vykresli_vse():
     okno.fill(BILA)
     
-    # Mřížka
-    pygame.draw.line(okno, CERNA, (100, 0), (100, 300), 3)
-    pygame.draw.line(okno, CERNA, (200, 0), (200, 300), 3)
-    pygame.draw.line(okno, CERNA, (0, 100), (300, 100), 3)
-    pygame.draw.line(okno, CERNA, (0, 200), (300, 200), 3)
+    # 1. Herní pole
+    for i in range(1, 3):
+        pygame.draw.line(okno, CERNA, (100 * i, 0), (100 * i, 300), 2)
+        pygame.draw.line(okno, CERNA, (0, 100 * i), (300, 100 * i), 2)
     
-    # Symboly
-    pismo = pygame.font.Font(None, 100)
+    pismo_symbol = pygame.font.Font(None, 100)
     for r in range(3):
         for s in range(3):
-            x = s * 100 + 50
-            y = r * 100 + 50
+            x, y = s * 100 + 50, r * 100 + 50
             if pole[r][s] == 1:
-                text = pismo.render("X", True, MODRA)
-                okno.blit(text, text.get_rect(center=(x, y)))
+                img = pismo_symbol.render("X", True, MODRA)
+                okno.blit(img, img.get_rect(center=(x, y)))
             elif pole[r][s] == 2:
-                text = pismo.render("O", True, CERVENA)
-                okno.blit(text, text.get_rect(center=(x, y)))
-    
-    # Hlášky
-    maly_pismo = pygame.font.Font(None, 30)
-    if not pripojeno:
-        text = maly_pismo.render("Čekám na hráče...", True, CERNA)
-        okno.blit(text, (50, 10))
-    elif konec != 0:
-        if konec == muj_symbol:
-            text = maly_pismo.render("VYHRÁL JSI!", True, MODRA)
-        else:
-            text = maly_pismo.render("PROHRÁL JSI!", True, CERVENA)
-        okno.blit(text, (70, 130))
-    elif hrac == muj_symbol:
-        text = maly_pismo.render("Tvůj tah", True, MODRA)
-        okno.blit(text, (100, 10))
-    else:
-        text = maly_pismo.render("Čekej...", True, CERVENA)
-        okno.blit(text, (110, 10))
+                img = pismo_symbol.render("O", True, CERVENA)
+                okno.blit(img, img.get_rect(center=(x, y)))
 
-# Kontrola výhry
-def zkontroluj_vyhru():
-    for r in range(3):
-        if pole[r][0] == pole[r][1] == pole[r][2] != 0:
-            return pole[r][0]
-    for s in range(3):
-        if pole[0][s] == pole[1][s] == pole[2][s] != 0:
-            return pole[0][s]
-    if pole[0][0] == pole[1][1] == pole[2][2] != 0:
-        return pole[0][0]
-    if pole[0][2] == pole[1][1] == pole[2][0] != 0:
-        return pole[0][2]
+    # 2. Terminál (vpravo)
+    pygame.draw.rect(okno, CERNA, (SIRKA_HRY, 0, SIRKA_TERMINALU, 300))
+    pygame.draw.line(okno, ZELENA, (SIRKA_HRY, 0), (SIRKA_HRY, 300), 2)
+    
+    font_term = pygame.font.SysFont("monospace", 15)
+    for i, radek in enumerate(logy):
+        barva = ZELENA if "Error" not in radek else CERVENA
+        img = font_term.render(f"> {radek}", True, barva)
+        okno.blit(img, (SIRKA_HRY + 10, 10 + i * 20))
+
+    # 3. Stavové hlášky na ploše
+    font_stav = pygame.font.Font(None, 24)
+    if konec != 0:
+        texty = {1: "X WON!", 2: "O WON!", 3: "DRAW!"}
+        msg = f"{texty[konec]} [Press R]"
+        okno.blit(font_stav.render(msg, True, CERNA), (10, 10))
+
+def zkontroluj_stav():
+    # Výherní kombinace
+    for i in range(3):
+        if pole[i][0] == pole[i][1] == pole[i][2] != 0: return pole[i][0]
+        if pole[0][i] == pole[1][i] == pole[2][i] != 0: return pole[0][i]
+    if pole[0][0] == pole[1][1] == pole[2][2] != 0: return pole[0][0]
+    if pole[0][2] == pole[1][1] == pole[2][0] != 0: return pole[0][2]
+    # Remíza
+    if all(pole[r][s] != 0 for r in range(3) for s in range(3)): return 3
     return 0
 
-# Hlavní smyčka
-while hra_bezi:
-    
-    # Pokus o připojení klienta
+def odesli_data():
+    if pripojeno and klient:
+        try:
+            stav = {"pole": pole, "konec": konec, "hrac": hrac}
+            klient.send(pickle.dumps(stav))
+        except Exception as e:
+            pridej_log(f"Send Error: {e}")
+
+# --- HLAVNÍ SMYČKA ---
+running = True
+while running:
+    # Připojení klienta
     if not pripojeno:
         try:
             klient, adresa = server.accept()
             klient.setblocking(False)
             pripojeno = True
-            print(f"Klient připojen: {adresa}")
-        except BlockingIOError:
-            pass  # Žádný klient čeká, ignoruj
-        except Exception as e:
-            print(f"Chyba při připojování: {e}")
-    
-    # Příjem dat od klienta
-    if pripojeno and hrac != muj_symbol and konec == 0:
+            pridej_log(f"Client: {adresa[0]}")
+            odesli_data() # Pošle info, kdo začíná
+        except: pass
+
+    # Příjem dat (tah klienta)
+    if pripojeno and hrac == 2 and konec == 0:
         try:
             data = klient.recv(4096)
             if data:
-                tah = pickle.loads(data)  # Dostane [radek, sloupec]
-                pole[tah[0]][tah[1]] = 2  # Umístí O
-                konec = zkontroluj_vyhru()
-                if konec == 0:
-                    hrac = muj_symbol  # Přepne na server
-                # Pošle zpět aktuální stav
-                try:
-                    klient.send(pickle.dumps({"pole": pole, "konec": konec}))
-                except Exception as e:
-                    print(f"Chyba při posílání dat: {e}")
-                    pripojeno = False
-        except BlockingIOError:
-            pass  # Žádná data k přečtení, ignoruj
-        except ConnectionResetError:
-            print("Klient se odpojil")
-            pripojeno = False
-            klient = None
-        except Exception as e:
-            print(f"Chyba při příjmu dat: {e}")
-    
-    # Události
-    for udalost in pygame.event.get():
-        if udalost.type == pygame.QUIT:
-            hra_bezi = False
+                tah = pickle.loads(data)
+                pole[tah[0]][tah[1]] = 2
+                pridej_log(f"Client Move: [{tah[0]},{tah[1]}]")
+                konec = zkontroluj_stav()
+                hrac = 1 if konec == 0 else hrac
+                if konec != 0: pridej_log(f"Game End: {konec}")
+                odesli_data()
+        except: pass
+
+    # Eventy
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
         
-        # Můj tah
-        if udalost.type == pygame.MOUSEBUTTONDOWN and pripojeno and hrac == muj_symbol and konec == 0:
-            x, y = udalost.pos
-            s = x // 100
-            r = y // 100
-            
-            if 0 <= r < 3 and 0 <= s < 3 and pole[r][s] == 0:
-                pole[r][s] = muj_symbol  # Umístí X
-                konec = zkontroluj_vyhru()
-                
-                # Pošle stav klientovi
-                try:
-                    klient.send(pickle.dumps({"pole": pole, "konec": konec}))
-                except Exception as e:
-                    print(f"Chyba při posílání tahu: {e}")
-                    pripojeno = False
-                
-                if konec == 0:
-                    hrac = 2  # Přepne na klienta
-    
+        # Restart hry
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+            reset_hry()
+            pridej_log("Game Restarted...")
+            odesli_data()
+
+        # Tah serveru
+        if event.type == pygame.MOUSEBUTTONDOWN and hrac == 1 and konec == 0 and pripojeno:
+            mx, my = event.pos
+            if mx < SIRKA_HRY: # Klik jen do pole
+                r, s = my // 100, mx // 100
+                if pole[r][s] == 0:
+                    pole[r][s] = 1
+                    pridej_log(f"Server Move: [{r},{s}]")
+                    konec = zkontroluj_stav()
+                    hrac = 2 if konec == 0 else hrac
+                    if konec != 0: pridej_log(f"Game End: {konec}")
+                    odesli_data()
+
     vykresli_vse()
     pygame.display.flip()
-    hodiny.tick(100)  # 100 FPS
+    hodiny.tick(60)
 
-# Ukončení
-if klient:
-    try:
-        klient.close()
-    except:
-        pass
-server.close()
 pygame.quit()
-print("Server ukončen")

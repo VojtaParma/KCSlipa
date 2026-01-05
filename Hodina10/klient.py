@@ -1,13 +1,12 @@
 import pygame
 import socket
 import pickle
-import sys
 
-# Spuštění pygame
+# Nastavení okna (stejné jako u serveru pro konzistenci, ale bez terminálu)
 pygame.init()
 okno = pygame.display.set_mode((300, 300))
 pygame.display.set_caption("Piškvorky KLIENT - Ty jsi O")
-hodiny = pygame.time.Clock()  # Pro řízení FPS
+hodiny = pygame.time.Clock()
 
 # Barvy
 BILA = (255, 255, 255)
@@ -15,140 +14,89 @@ CERNA = (0, 0, 0)
 MODRA = (0, 0, 255)
 CERVENA = (255, 0, 0)
 
-# Hrací pole
-pole = [[0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0]]
-
-hrac = 1  # Kdo je na tahu (1 = X/server, 2 = O/klient)
-muj_symbol = 2  # Klient je vždy O
-hra_bezi = True
+# Herní proměnné
+pole = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+hrac = 0
+muj_symbol = 2 # Klient je vždy O
 konec = 0
 pripojeno = False
 
 # --- SÍŤOVÁ ČÁST ---
-# ZMĚŇ "localhost" na IP adresu serveru, pokud není na stejném PC!
-# Zjistíš to na serveru příkazem: ipconfig (Windows) nebo ifconfig (Linux/Mac)
-print("Připojuji se k serveru...")
-
+klient_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
-    klient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    klient.connect(("localhost", 5555))  # Připojí se k serveru
-    klient.setblocking(False)  # Neblokující režim
+    # IP adresa "127.0.0.1" znamená, že klient běží na stejném PC jako server
+    klient_socket.connect(("127.0.0.1", 5555))
+    klient_socket.setblocking(False)
     pripojeno = True
     print("Připojeno k serveru!")
-except ConnectionRefusedError:
-    print("CHYBA: Server neběží nebo je nedostupný!")
-    print("Ujisti se, že:")
-    print("1. Server je spuštěný")
-    print("2. IP adresa je správná")
-    print("3. Oba počítače jsou na stejné síti")
-    pygame.quit()
-    sys.exit()
 except Exception as e:
-    print(f"Chyba při připojování: {e}")
-    pygame.quit()
-    sys.exit()
+    print(f"Nepodařilo se připojit: {e}")
 
-# Funkce pro vykreslení
 def vykresli_vse():
     okno.fill(BILA)
+    for i in range(1, 3):
+        pygame.draw.line(okno, CERNA, (100 * i, 0), (100 * i, 300), 3)
+        pygame.draw.line(okno, CERNA, (0, 100 * i), (300, 100 * i), 3)
     
-    # Mřížka
-    pygame.draw.line(okno, CERNA, (100, 0), (100, 300), 3)
-    pygame.draw.line(okno, CERNA, (200, 0), (200, 300), 3)
-    pygame.draw.line(okno, CERNA, (0, 100), (300, 100), 3)
-    pygame.draw.line(okno, CERNA, (0, 200), (300, 200), 3)
-    
-    # Symboly
     pismo = pygame.font.Font(None, 100)
     for r in range(3):
         for s in range(3):
-            x = s * 100 + 50
-            y = r * 100 + 50
+            x, y = s * 100 + 50, r * 100 + 50
             if pole[r][s] == 1:
                 text = pismo.render("X", True, MODRA)
                 okno.blit(text, text.get_rect(center=(x, y)))
             elif pole[r][s] == 2:
                 text = pismo.render("O", True, CERVENA)
                 okno.blit(text, text.get_rect(center=(x, y)))
-    
-    # Hlášky
-    maly_pismo = pygame.font.Font(None, 30)
-    if not pripojeno:
-        text = maly_pismo.render("Odpojeno od serveru!", True, CERVENA)
-        okno.blit(text, (40, 130))
-    elif konec != 0:
-        if konec == muj_symbol:
-            text = maly_pismo.render("VYHRÁL JSI!", True, CERVENA)
-        else:
-            text = maly_pismo.render("PROHRÁL JSI!", True, MODRA)
-        okno.blit(text, (70, 130))
-    elif hrac == muj_symbol:
-        text = maly_pismo.render("Tvůj tah", True, CERVENA)
-        okno.blit(text, (100, 10))
-    else:
-        text = maly_pismo.render("Čekej...", True, MODRA)
-        okno.blit(text, (110, 10))
 
-# Hlavní smyčka
-while hra_bezi:
-    
-    # Příjem dat od serveru
+    # Stavové hlášky
+    maly_pismo = pygame.font.Font(None, 30)
+    if konec != 0:
+        msg = "REMIZA!" if konec == 3 else ("VYHRÁL JSI!" if konec == muj_symbol else "PROHRÁL JSI!")
+        text = maly_pismo.render(msg, True, CERNA)
+        okno.blit(text, (10, 10))
+    elif hrac == muj_symbol:
+        text = maly_pismo.render("Tvůj tah (O)", True, CERVENA)
+        okno.blit(text, (10, 10))
+    else:
+        text = maly_pismo.render("Čekej na server...", True, MODRA)
+        okno.blit(text, (10, 10))
+
+# Hlavní smyčka klienta
+bezi = True
+while bezi:
+    # 1. Příjem dat ze serveru (Stav pole, kdo je na tahu, konec)
     if pripojeno:
         try:
-            data = klient.recv(4096)
+            data = klient_socket.recv(4096)
             if data:
                 stav = pickle.loads(data)
                 pole = stav["pole"]
                 konec = stav["konec"]
-                if konec == 0:
-                    hrac = muj_symbol  # Přepne na klienta
-        except BlockingIOError:
-            pass  # Žádná data k přečtení, ignoruj
-        except ConnectionResetError:
-            print("Server se odpojil")
-            pripojeno = False
-        except EOFError:
-            print("Server ukončil spojení")
-            pripojeno = False
+                hrac = stav["hrac"]
+        except (BlockingIOError, EOFError): pass
         except Exception as e:
-            print(f"Chyba při příjmu dat: {e}")
-    
-    # Události
+            print(f"Ztráta spojení: {e}")
+            pripojeno = False
+
+    # 2. Události
     for udalost in pygame.event.get():
         if udalost.type == pygame.QUIT:
-            hra_bezi = False
+            bezi = False
         
-        # Můj tah
         if udalost.type == pygame.MOUSEBUTTONDOWN and pripojeno and hrac == muj_symbol and konec == 0:
             x, y = udalost.pos
-            s = x // 100
-            r = y // 100
-            
+            r, s = y // 100, x // 100
             if 0 <= r < 3 and 0 <= s < 3 and pole[r][s] == 0:
-                pole[r][s] = muj_symbol  # Umístí O lokálně
-                
-                # Pošle tah serveru
+                # Klient pošle serveru souřadnice svého tahu
                 try:
-                    klient.send(pickle.dumps([r, s]))
-                    hrac = 1  # Přepne na server
-                except BrokenPipeError:
-                    print("Spojení přerušeno")
-                    pripojeno = False
-                except Exception as e:
-                    print(f"Chyba při posílání tahu: {e}")
-                    pripojeno = False
-    
+                    klient_socket.send(pickle.dumps([r, s]))
+                    # Lokálně nastavíme, aby hráč nemohl klikat dvakrát
+                    hrac = 1 
+                except: pass
+
     vykresli_vse()
     pygame.display.flip()
-    hodiny.tick(100)  # 100 FPS
+    hodiny.tick(60)
 
-# Ukončení
-if pripojeno:
-    try:
-        klient.close()
-    except:
-        pass
 pygame.quit()
-print("Klient ukončen")
