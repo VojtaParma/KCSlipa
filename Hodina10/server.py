@@ -6,6 +6,7 @@ import pickle
 pygame.init()
 okno = pygame.display.set_mode((300, 300))
 pygame.display.set_caption("Piškvorky SERVER - Ty jsi X")
+hodiny = pygame.time.Clock()  # Pro řízení FPS
 
 # Barvy
 BILA = (255, 255, 255)
@@ -25,11 +26,13 @@ konec = 0
 
 # --- SÍŤOVÁ ČÁST ---
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Umožní znovupoužití portu
 server.bind(("0.0.0.0", 5555))  # Naslouchá na portu 5555
 server.listen(1)
 server.setblocking(False)  # Neblokující režim
 
 print("Čekám na připojení klienta...")
+print("Server běží na portu 5555")
 klient = None
 pripojeno = False
 
@@ -98,8 +101,10 @@ while hra_bezi:
             klient.setblocking(False)
             pripojeno = True
             print(f"Klient připojen: {adresa}")
-        except:
-            pass
+        except BlockingIOError:
+            pass  # Žádný klient čeká, ignoruj
+        except Exception as e:
+            print(f"Chyba při připojování: {e}")
     
     # Příjem dat od klienta
     if pripojeno and hrac != muj_symbol and konec == 0:
@@ -110,11 +115,21 @@ while hra_bezi:
                 pole[tah[0]][tah[1]] = 2  # Umístí O
                 konec = zkontroluj_vyhru()
                 if konec == 0:
-                    hrac = muj_symbol  # Přepne na serveru
+                    hrac = muj_symbol  # Přepne na server
                 # Pošle zpět aktuální stav
-                klient.send(pickle.dumps({"pole": pole, "konec": konec}))
-        except:
-            pass
+                try:
+                    klient.send(pickle.dumps({"pole": pole, "konec": konec}))
+                except Exception as e:
+                    print(f"Chyba při posílání dat: {e}")
+                    pripojeno = False
+        except BlockingIOError:
+            pass  # Žádná data k přečtení, ignoruj
+        except ConnectionResetError:
+            print("Klient se odpojil")
+            pripojeno = False
+            klient = None
+        except Exception as e:
+            print(f"Chyba při příjmu dat: {e}")
     
     # Události
     for udalost in pygame.event.get():
@@ -127,21 +142,30 @@ while hra_bezi:
             s = x // 100
             r = y // 100
             
-            if pole[r][s] == 0:
+            if 0 <= r < 3 and 0 <= s < 3 and pole[r][s] == 0:
                 pole[r][s] = muj_symbol  # Umístí X
                 konec = zkontroluj_vyhru()
                 
                 # Pošle stav klientovi
-                klient.send(pickle.dumps({"pole": pole, "konec": konec}))
+                try:
+                    klient.send(pickle.dumps({"pole": pole, "konec": konec}))
+                except Exception as e:
+                    print(f"Chyba při posílání tahu: {e}")
+                    pripojeno = False
                 
                 if konec == 0:
                     hrac = 2  # Přepne na klienta
     
     vykresli_vse()
     pygame.display.flip()
+    hodiny.tick(100)  # 100 FPS
 
 # Ukončení
 if klient:
-    klient.close()
+    try:
+        klient.close()
+    except:
+        pass
 server.close()
 pygame.quit()
+print("Server ukončen")

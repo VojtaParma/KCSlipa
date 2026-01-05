@@ -1,11 +1,13 @@
 import pygame
 import socket
 import pickle
+import sys
 
 # Spuštění pygame
 pygame.init()
 okno = pygame.display.set_mode((300, 300))
 pygame.display.set_caption("Piškvorky KLIENT - Ty jsi O")
+hodiny = pygame.time.Clock()  # Pro řízení FPS
 
 # Barvy
 BILA = (255, 255, 255)
@@ -22,14 +24,31 @@ hrac = 1  # Kdo je na tahu (1 = X/server, 2 = O/klient)
 muj_symbol = 2  # Klient je vždy O
 hra_bezi = True
 konec = 0
+pripojeno = False
 
 # --- SÍŤOVÁ ČÁST ---
 # ZMĚŇ "localhost" na IP adresu serveru, pokud není na stejném PC!
 # Zjistíš to na serveru příkazem: ipconfig (Windows) nebo ifconfig (Linux/Mac)
-klient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-klient.connect(("localhost", 5555))  # Připojí se k serveru
-klient.setblocking(False)  # Neblokující režim
-print("Připojeno k serveru!")
+print("Připojuji se k serveru...")
+
+try:
+    klient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    klient.connect(("localhost", 5555))  # Připojí se k serveru
+    klient.setblocking(False)  # Neblokující režim
+    pripojeno = True
+    print("Připojeno k serveru!")
+except ConnectionRefusedError:
+    print("CHYBA: Server neběží nebo je nedostupný!")
+    print("Ujisti se, že:")
+    print("1. Server je spuštěný")
+    print("2. IP adresa je správná")
+    print("3. Oba počítače jsou na stejné síti")
+    pygame.quit()
+    sys.exit()
+except Exception as e:
+    print(f"Chyba při připojování: {e}")
+    pygame.quit()
+    sys.exit()
 
 # Funkce pro vykreslení
 def vykresli_vse():
@@ -56,7 +75,10 @@ def vykresli_vse():
     
     # Hlášky
     maly_pismo = pygame.font.Font(None, 30)
-    if konec != 0:
+    if not pripojeno:
+        text = maly_pismo.render("Odpojeno od serveru!", True, CERVENA)
+        okno.blit(text, (40, 130))
+    elif konec != 0:
         if konec == muj_symbol:
             text = maly_pismo.render("VYHRÁL JSI!", True, CERVENA)
         else:
@@ -73,7 +95,7 @@ def vykresli_vse():
 while hra_bezi:
     
     # Příjem dat od serveru
-    if hrac != muj_symbol or konec != 0:
+    if pripojeno:
         try:
             data = klient.recv(4096)
             if data:
@@ -82,8 +104,16 @@ while hra_bezi:
                 konec = stav["konec"]
                 if konec == 0:
                     hrac = muj_symbol  # Přepne na klienta
-        except:
-            pass
+        except BlockingIOError:
+            pass  # Žádná data k přečtení, ignoruj
+        except ConnectionResetError:
+            print("Server se odpojil")
+            pripojeno = False
+        except EOFError:
+            print("Server ukončil spojení")
+            pripojeno = False
+        except Exception as e:
+            print(f"Chyba při příjmu dat: {e}")
     
     # Události
     for udalost in pygame.event.get():
@@ -91,22 +121,34 @@ while hra_bezi:
             hra_bezi = False
         
         # Můj tah
-        if udalost.type == pygame.MOUSEBUTTONDOWN and hrac == muj_symbol and konec == 0:
+        if udalost.type == pygame.MOUSEBUTTONDOWN and pripojeno and hrac == muj_symbol and konec == 0:
             x, y = udalost.pos
             s = x // 100
             r = y // 100
             
-            if pole[r][s] == 0:
+            if 0 <= r < 3 and 0 <= s < 3 and pole[r][s] == 0:
                 pole[r][s] = muj_symbol  # Umístí O lokálně
                 
                 # Pošle tah serveru
-                klient.send(pickle.dumps([r, s]))
-                
-                hrac = 1  # Přepne na serveru
+                try:
+                    klient.send(pickle.dumps([r, s]))
+                    hrac = 1  # Přepne na server
+                except BrokenPipeError:
+                    print("Spojení přerušeno")
+                    pripojeno = False
+                except Exception as e:
+                    print(f"Chyba při posílání tahu: {e}")
+                    pripojeno = False
     
     vykresli_vse()
     pygame.display.flip()
+    hodiny.tick(100)  # 100 FPS
 
 # Ukončení
-klient.close()
+if pripojeno:
+    try:
+        klient.close()
+    except:
+        pass
 pygame.quit()
+print("Klient ukončen")
