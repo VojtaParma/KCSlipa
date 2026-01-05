@@ -84,19 +84,30 @@ while bezi:
         if udalost.type == pygame.QUIT:
             bezi = False
         
+        # Ošetření tahu klienta
         if udalost.type == pygame.MOUSEBUTTONDOWN and pripojeno and hrac == muj_symbol and konec == 0:
             x, y = udalost.pos
             r, s = y // 100, x // 100
+            
             if 0 <= r < 3 and 0 <= s < 3 and pole[r][s] == 0:
-                # Klient pošle serveru souřadnice svého tahu
                 try:
+                    # 1. ODESLAT TAH
                     klient_socket.send(pickle.dumps([r, s]))
-                    # Lokálně nastavíme, aby hráč nemohl klikat dvakrát
-                    hrac = 1 
-                except: pass
+                    
+                    # 2. LOKÁLNÍ ZÁMEK (Zabrání dvojkliku)
+                    # Nastavíme hrac na 0, což není ani náš symbol, ani symbol soupeře
+                    # Tím se zablokuje podmínka "hrac == muj_symbol" pro další kliky
+                    hrac = 0 
+                    
+                    # 3. VOLITELNÉ: Můžeš si i lokálně dočasně vykreslit symbol, 
+                    # aby hra působila plynule, ale jistější je počkat na server.
+                    # pole[r][s] = muj_symbol 
+                    
+                except Exception as e:
+                    print(f"Chyba při odesílání: {e}")
 
     vykresli_vse()
     pygame.display.flip()
-    hodiny.tick(60)
+    hodiny.tick(1000)
 
 pygame.quit()

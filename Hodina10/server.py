@@ -120,18 +120,20 @@ while running:
             odesli_data() # Pošle info, kdo začíná
         except: pass
 
-    # Příjem dat (tah klienta)
-    if pripojeno and hrac == 2 and konec == 0:
+# Příjem dat (tah klienta)
+    if pripojeno and hrac == 2 and konec == 0: # <-- Striktní kontrola hrac == 2
         try:
             data = klient.recv(4096)
             if data:
                 tah = pickle.loads(data)
-                pole[tah[0]][tah[1]] = 2
-                pridej_log(f"Client Move: [{tah[0]},{tah[1]}]")
-                konec = zkontroluj_stav()
-                hrac = 1 if konec == 0 else hrac
-                if konec != 0: pridej_log(f"Game End: {konec}")
-                odesli_data()
+                # POJISTKA: Server ještě jednou ověří, zda je pole volné
+                if pole[tah[0]][tah[1]] == 0:
+                    pole[tah[0]][tah[1]] = 2
+                    pridej_log(f"Client Move: [{tah[0]},{tah[1]}]")
+                    konec = zkontroluj_stav()
+                    hrac = 1 # IHNED přepneme na tah serveru
+                    if konec != 0: pridej_log(f"Game End: {konec}")
+                    odesli_data()
         except: pass
 
     # Eventy
@@ -160,6 +162,6 @@ while running:
 
     vykresli_vse()
     pygame.display.flip()
-    hodiny.tick(60)
+    hodiny.tick(1000)
 
 pygame.quit()
