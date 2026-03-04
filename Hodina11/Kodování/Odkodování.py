@@ -1,5 +1,4 @@
 nazev_souboru = input("Zadej název souboru (např. zasifrovano.txt): ")
-
 a_pismeno = input("Zadej znak, který odpovídá A: ")
 
 klic = ord(a_pismeno) - ord("A")
