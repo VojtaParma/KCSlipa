@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Počítadlo</title>
+</head>
+<body>
+
+<h2>Počet kliknutí: </h2>
+<p id="pocet">0</p>
+<button onclick="klik()">Klikni</button>
+
+<script>
+let pocet = 0;
+
+function klik() {
+    pocet = pocet + 1;
+    document.getElementById("pocet").innerHTML = pocet;
+}
+</script>
+
+</body>
+</html>

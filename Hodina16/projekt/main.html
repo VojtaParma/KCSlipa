@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Česká Republika</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Česká Republika</h1>
+
+<section class="sekce-staatni-znaky" id="sekce1">
+<h2>Státní znaky</h2>
+<button onclick="zmenBarvu('sekce1','green')">Zelená</button>
+<button onclick="zmenBarvu('sekce1','blue')">Modrá</button>
+<button onclick="zmenBarvu('sekce1','red')">Červená</button>
+
+<p><strong>Hlavní město:</strong> Praha</p>
+<p><strong>Hymna:</strong> Kde domov můj</p>
+<p><strong>Populace:</strong> Cca 10,5 milionů obyvatel</p>
+</section>
+
+<section class="sekce-politikove" id="sekce2">
+<h2>Politikové</h2>
+<button onclick="zmenBarvu('sekce2','green')">Zelená</button>
+<button onclick="zmenBarvu('sekce2','blue')">Modrá</button>
+<button onclick="zmenBarvu('sekce2','red')">Červená</button>
+
+<p><strong>Prezident:</strong> Petr Pavel</p>
+<p><strong>Premiér:</strong> Andrej Babiš</p>
+<p><strong>Typ vlády:</strong> Parlamentní demokracie</p>
+</section>
+
+<section class="sekce-mesta" id="sekce3">
+<h2>5 Největších měst</h2>
+<button onclick="zmenBarvu('sekce3','green')">Zelená</button>
+<button onclick="zmenBarvu('sekce3','blue')">Modrá</button>
+<button onclick="zmenBarvu('sekce3','red')">Červená</button>
+
+<table>
+<tr>
+<th>Město</th>
+<th>Počet obyvatel</th>
+</tr>
+<tr>
+<td>Praha</td>
+<td>1 360 000</td>
+</tr>
+<tr>
+<td>Brno</td>
+<td>380 000</td>
+</tr>
+<tr>
+<td>Ostrava</td>
+<td>290 000</td>
+</tr>
+<tr>
+<td>Plzeň</td>
+<td>177 000</td>
+</tr>
+<tr>
+<td>Liberec</td>
+<td>105 000</td>
+</tr>
+</table>
+</section>
+
+<section class="sekce-weby" id="sekce4">
+<h2>Další informace</h2>
+<button onclick="zmenBarvu('sekce4','green')">Zelená</button>
+<button onclick="zmenBarvu('sekce4','blue')">Modrá</button>
+<button onclick="zmenBarvu('sekce4','red')">Červená</button>
+
+<p><a href="https://cs.wikipedia.org/wiki/Česká_republika" target="_blank">Česká Republika - Wikipedie</a></p>
+</section>
+
+<script>
+function zmenBarvu(id, barva) {
+    document.getElementById(id).style.backgroundColor = barva;
+}
+</script>
+
+</body>
+</html>
