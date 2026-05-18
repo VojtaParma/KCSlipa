@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Seznam s mazáním</title>
+<link rel="stylesheet" href="style1.css">
+</head>
+<body>
+
+<input type="text" id="input" placeholder="Napiš něco">
+<button onclick="pridej()">Přidat</button>
+
+<div id="vystup"></div>
+
+<script>
+function pridej() {
+    let text = document.getElementById("input").value;
+
+    if (text === "") return;
+
+    let div = document.createElement("div");
+
+  
+    let p = document.createElement("p");
+    p.innerHTML = text;
+    p.style.display = "inline"; 
+
+    let btn = document.createElement("button");
+    btn.innerHTML = "Smazat";
+
+    btn.onclick = function() {
+        div.remove();
+    };
+
+    div.appendChild(p);
+    div.appendChild(btn);
+
+    document.getElementById("vystup").appendChild(div);
+
+    document.getElementById("input").value = "";
+}
+</script>
+
+</body>
+</html>

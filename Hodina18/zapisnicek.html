@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Input → odstavec</title>
+
+<link rel="stylesheet" href="style1.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Přidávání textu</h1>
+
+    <input type="text" id="input" placeholder="Napiš něco">
+    <button onclick="pridej()">Přidat</button>
+
+    <div id="vystup"></div>
+</div>
+
+<script>
+function pridej() {
+    let text = document.getElementById("input").value;
+
+    if (text === "") return;
+
+    let p = document.createElement("p");
+    p.innerHTML = text;
+
+    document.getElementById("vystup").appendChild(p);
+
+    document.getElementById("input").value = "";
+}
+</script>
+
+</body>
+</html>

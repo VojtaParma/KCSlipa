@@ -1,0 +1,23 @@
+body {
+    text-align: center;
+    font-family: Arial;
+}
+
+#grid {
+    width: 500px;
+    margin: auto;
+
+    display: grid;
+    grid-template-columns: repeat(10, 50px);
+}
+
+.box {
+    width: 50px;
+    height: 50px;
+
+
+    border: 1px solid black;
+    box-sizing: border-box;
+
+    cursor: pointer;
+}
